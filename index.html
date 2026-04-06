@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#5aabf5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="MonthEnd">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" id="ati" href="">
+<link rel="manifest" id="pwa-manifest" href="">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;1,300;1,400&display=swap" rel="stylesheet">
+<title>MonthEnd</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --blue-50: #edf6ff;
+    --blue-100: #c9e4fd;
+    --blue-200: #90c7fb;
+    --blue-400: #5aabf5;
+    --blue-600: #1a78d8;
+    --blue-800: #0c4d8c;
+    --green: #2ecc71;
+    --red: #e74c3c;
+    --bg: #f0f7ff;
+    --surface: #ffffff;
+    --text: #0f1c2e;
+    --muted: #5a7a9e;
+    --border: rgba(90,171,245,0.22);
+    --border-s: rgba(90,171,245,0.45);
+    --r: 14px;
+    --rs: 9px;
+    --shadow: 0 2px 18px rgba(26,120,216,0.08);
+  }
+
+  body {
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+    font-weight: 300;
+    font-style: normal;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ========= PAGES ========= */
+  .page {
+    min-height: 100vh;
+    padding-bottom: 60px;
+    display: none;
+    animation: fadeIn 0.22s ease;
+  }
+  .page.active { display: block; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+
+  /* ========= SHARED HEADER ========= */
+  .app-header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 20px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .app-title {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--blue-400);
+  }
+  .icon-btn {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--border-s);
+    background: var(--surface);
+    color: var(--blue-600);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, transform 0.1s;
+    -webkit-tap-highlight-color: transparent;
+    flex-shrink: 0;
+  }
+  .icon-btn:hover { background: var(--blue-50); }
+  .icon-btn:active { transform: scale(0.92); }
+
+  /* Month nav */
+  .month-nav {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .month-label {
+    font-size: 22px;
+    font-weight: 300;
+    font-style: italic;
+    color: var(--text);
+    letter-spacing: 0.2px;
+    flex: 1;
+    text-align: center;
+    text-transform: capitalize;
+    transition: color 0.3s ease;
+  }
+  .month-label.incomplete { color: #e74c3c; }
+  .month-label.complete   { color: #27ae60; }
+
+  /* Progress */
+  .progress-wrap {
+    padding: 14px 20px 0;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+  .progress-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    font-weight: 300;
+    font-style: italic;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .progress-track {
+    height: 6px;
+    background: var(--blue-100);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--blue-400), var(--blue-600));
+    border-radius: 99px;
+    transition: width 0.45s cubic-bezier(.4,0,.2,1);
+  }
+
+  /* ========= CONTENT ========= */
+  .content {
+    padding: 16px 16px 0;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+  .section-label {
+    font-size: 11px;
+    font-weight: 300;
+    font-style: italic;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0 4px;
+    margin-bottom: 8px;
+  }
+
+  /* ========= TASK CARD / SWIPE ========= */
+  .task-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .swipe-row {
+    position: relative;
+    overflow: hidden;
+    border-bottom: 1px solid var(--border);
+  }
+  .swipe-row:last-child { border-bottom: none; }
+
+  .swipe-bg {
+    position: absolute; inset: 0;
+    display: flex; align-items: center;
+    pointer-events: none;
+  }
+  .swipe-bg-right { background: var(--green); justify-content: flex-start; padding-left: 22px; opacity: 0; }
+  .swipe-bg-left  { background: var(--red);   justify-content: flex-end;   padding-right: 22px; opacity: 0; }
+
+  .task-item {
+    position: relative;
+    display: flex; align-items: center;
+    padding: 0 16px;
+    gap: 14px;
+    min-height: 58px;
+    background: var(--surface);
+    touch-action: pan-y;
+    will-change: transform;
+    z-index: 1;
+    cursor: grab;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  .task-item.is-dragging { cursor: grabbing; }
+  .task-item.snapping { transition: transform 0.32s cubic-bezier(.25,.46,.45,.94); }
+  .task-item.done { background: #f4fbff; }
+
+  .status-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: var(--border-s);
+    transition: background 0.25s, box-shadow 0.25s;
+  }
+  .task-item.done .status-dot {
+    background: var(--blue-400);
+    box-shadow: 0 0 0 3px rgba(90,171,245,0.18);
+  }
+  .task-name {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 300;
+    color: var(--text);
+    transition: color 0.2s, opacity 0.2s;
+  }
+  .task-item.done .task-name {
+    color: var(--muted);
+    text-decoration: line-through;
+    text-decoration-color: var(--blue-200);
+    opacity: 0.7;
+  }
+
+  /* Swipe hint */
+  .swipe-hint {
+    display: flex; align-items: center; justify-content: center; gap: 20px;
+    padding: 6px 0 4px;
+    font-size: 12px; font-weight: 300; font-style: italic; color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .swipe-hint span { display: flex; align-items: center; gap: 5px; }
+
+  .all-done-badge {
+    display: flex; align-items: center; gap: 10px; justify-content: center;
+    background: #eafaf1; border: 1px solid #b7edce; border-radius: var(--r);
+    padding: 14px 20px; margin-bottom: 16px;
+    color: #1a7a45; font-size: 14px; font-weight: 600;
+  }
+  .empty-state {
+    text-align: center; padding: 40px 20px;
+    color: var(--muted); font-size: 14px;
+  }
+  .swipe-row.collapsing {
+    animation: collapse 0.28s ease forwards; overflow: hidden;
+  }
+  @keyframes collapse {
+    from { max-height:80px; opacity:1; }
+    to   { max-height:0;    opacity:0; }
+  }
+
+  /* Notif banner */
+  .notif-banner {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--blue-50); border: 1px solid var(--blue-100);
+    border-radius: var(--r); padding: 13px 16px; margin-bottom: 16px;
+    font-size: 13.5px; color: var(--blue-800);
+  }
+  .notif-text { flex:1; line-height:1.4; }
+  .notif-btn {
+    background: var(--blue-400); color: white; border: none;
+    border-radius: var(--rs); padding: 7px 14px;
+    font-size: 13px; font-weight: 600; cursor: pointer; flex-shrink: 0;
+    font-family: inherit; transition: background 0.15s;
+  }
+  .notif-btn:hover { background: var(--blue-600); }
+
+  /* ========= MANAGER PAGE ========= */
+  .mgr-header-title {
+    font-size: 20px;
+    font-weight: 300;
+    font-style: italic;
+    letter-spacing: 0.2px;
+    color: var(--text);
+  }
+
+  /* Manager task list */
+  .mgr-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .mgr-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 0 16px;
+    min-height: 54px;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.12s;
+  }
+  .mgr-row:last-child { border-bottom: none; }
+  .mgr-row-icon {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--blue-50);
+    border: 1px solid var(--blue-100);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    color: var(--blue-600);
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .mgr-row-name {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 300;
+    color: var(--text);
+  }
+  .mgr-del-btn {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    border: 1px solid rgba(231,76,60,0.25);
+    background: none;
+    color: #c0392b;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.14s, border-color 0.14s;
+    flex-shrink: 0;
+    line-height: 1;
+    font-family: inherit;
+  }
+  .mgr-del-btn:hover { background: #fff0f0; border-color: rgba(231,76,60,0.5); }
+
+  /* Add form */
+  .add-form-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    box-shadow: var(--shadow);
+    padding: 18px 16px;
+  }
+  .add-form-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-bottom: 12px;
+  }
+  .add-form-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .add-input {
+    flex: 1;
+    border: 1px solid var(--border-s);
+    background: var(--blue-50);
+    border-radius: var(--rs);
+    padding: 11px 14px;
+    font-size: 15px;
+    font-family: inherit;
+    color: var(--text);
+    outline: none;
+    transition: box-shadow 0.15s, border-color 0.15s;
+  }
+  .add-input:focus { box-shadow: 0 0 0 2px var(--blue-200); border-color: var(--blue-400); }
+  .add-input::placeholder { color: var(--muted); }
+  .add-submit {
+    height: 44px; padding: 0 20px;
+    border-radius: var(--rs);
+    border: none;
+    background: var(--blue-400);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    flex-shrink: 0;
+    transition: background 0.15s, transform 0.1s;
+    white-space: nowrap;
+  }
+  .add-submit:hover { background: var(--blue-600); }
+  .add-submit:active { transform: scale(0.97); }
+
+  /* ========= LOGO ========= */
+  .logo-wrap {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+  }
+  .logo-icon {
+    width: 52px; height: 52px;
+    border-radius: 13px;
+    flex-shrink: 0;
+    animation: logoPop 1.1s cubic-bezier(.34,1.56,.64,1) both;
+  }
+  .logo-name {
+    font-size: 20px;
+    font-weight: 700;
+    font-style: italic;
+    letter-spacing: -0.3px;
+    color: var(--blue-600);
+    animation: logoPop 1.1s cubic-bezier(.34,1.56,.64,1) 0.08s both;
+  }
+  @keyframes logoPop {
+    0%   { opacity:0; transform: scale(0.2) rotate(-15deg); }
+    50%  { opacity:1; transform: scale(1.18) rotate(3deg); }
+    70%  { transform: scale(0.93) rotate(-2deg); }
+    85%  { transform: scale(1.06) rotate(1deg); }
+    100% { opacity:1; transform: scale(1) rotate(0deg); }
+  }
+
+  /* Feedback toast */
+  .toast {
+    position: fixed;
+    bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: #1a2a3a; color: white;
+    padding: 10px 20px;
+    border-radius: 99px;
+    font-size: 13px; font-weight: 500;
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+    z-index: 999;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- ======= PAGE PRINCIPALE ======= -->
+<div id="page-main" class="page active">
+
+  <div class="app-header">
+    <div class="header-row">
+      <div class="logo-wrap">
+        <svg class="logo-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+          <rect width="512" height="512" rx="112" fill="#4aa8f5"/>
+          <rect x="120" y="96" width="256" height="320" rx="22" fill="white"/>
+          <rect x="120" y="96" width="256" height="86" rx="22" fill="#1a72d4"/>
+          <rect x="120" y="158" width="256" height="24" fill="#1a72d4"/>
+          <rect x="192" y="72" width="22" height="48" rx="11" fill="#0a4a9c"/>
+          <rect x="298" y="72" width="22" height="48" rx="11" fill="#0a4a9c"/>
+          <rect x="156" y="220" width="88" height="11" rx="5" fill="#c0dcf8"/>
+          <rect x="156" y="244" width="130" height="11" rx="5" fill="#c0dcf8"/>
+          <path d="M154 308 L216 374 L364 224" stroke="#27ae60" stroke-width="40"
+            fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="logo-name">MonthEnd</span>
+      </div>
+      <button class="icon-btn" onclick="showPage('manager')" title="Gérer les tâches">
+        <svg width="17" height="17" viewBox="0 0 17 17" fill="none">
+          <circle cx="8.5" cy="8.5" r="2" stroke="currentColor" stroke-width="1.6"/>
+          <path d="M8.5 1v2M8.5 14v2M1 8.5h2M14 8.5h2
+                   M3.1 3.1l1.4 1.4M12.5 12.5l1.4 1.4
+                   M12.5 3.1l-1.4 1.4M4.5 12.5l-1.4 1.4"
+            stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+    <div class="month-nav">
+      <button class="icon-btn" onclick="changeMonth(-1)">&#8249;</button>
+      <div class="month-label" id="month-label"></div>
+      <button class="icon-btn" onclick="changeMonth(1)">&#8250;</button>
+    </div>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-row">
+      <span id="progress-text"></span>
+      <span id="progress-pct"></span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div id="notif-banner" class="notif-banner" style="display:none;margin-top:4px;">
+      <span style="font-size:18px;flex-shrink:0;">🔔</span>
+      <span class="notif-text">Activez les notifications pour un rappel le 1er de chaque mois.</span>
+      <button class="notif-btn" onclick="requestNotifPermission()">Activer</button>
+    </div>
+
+    <div id="all-done" class="all-done-badge" style="display:none;margin-top:4px;">
+      <span style="font-size:18px;">✓</span> Toutes les tâches sont complètes !
+    </div>
+
+    <div id="swipe-hint" class="swipe-hint" style="margin-top:8px;">
+      <span>
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="flex-shrink:0">
+          <path d="M2 7h10M8 3l4 4-4 4" stroke="#2ecc71" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Glisser à droite = cocher
+      </span>
+      <span>
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="flex-shrink:0">
+          <path d="M12 7H2M6 3L2 7l4 4" stroke="#e74c3c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Glisser à gauche = décocher
+      </span>
+    </div>
+
+    <div class="task-card" id="task-list" style="margin-top:8px;"></div>
+  </div>
+</div>
+
+<!-- ======= PAGE MANAGER ======= -->
+<div id="page-manager" class="page">
+
+  <div class="app-header">
+    <div class="header-row">
+      <button class="icon-btn" onclick="showPage('main')" title="Retour">
+        <svg width="17" height="17" viewBox="0 0 17 17" fill="none">
+          <path d="M10.5 3.5L5.5 8.5L10.5 13.5" stroke="currentColor" stroke-width="1.8"
+            stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <span class="mgr-header-title">Gérer les tâches</span>
+      <div style="width:36px;"></div>
+    </div>
+  </div>
+
+  <div class="content" style="padding-top:20px;">
+    <div class="section-label">Tâches actuelles</div>
+    <div class="mgr-card" id="mgr-task-list"></div>
+
+    <div class="section-label" style="margin-top:24px;">Nouvelle tâche</div>
+    <div class="add-form-card">
+      <div class="add-form-row">
+        <input class="add-input" id="mgr-input" type="text"
+          placeholder="Nom de la tâche…" maxlength="80"
+          onkeydown="if(event.key==='Enter')mgrAdd()">
+        <button class="add-submit" onclick="mgrAdd()">Ajouter</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+const DEFAULT_TASKS = [
+  "RAPPORT DE VENTE MENSUEL Q8","RAPPORT LOTERIE","RAPPORTS DELHAIZE",
+  "EXTRAITS DE COMPTE ALFADIS","RAPPORT UPS","CA PANOS"
+];
+const SWIPE_THRESHOLD = 80;
+let currentYear, currentMonth;
+
+/* ---- DATA ---- */
+function getData() {
+  try {
+    var d = JSON.parse(localStorage.getItem('compta_tasks') || 'null');
+    if (d && d.tasks) return d;
+  } catch(e) {}
+  var d = { tasks: DEFAULT_TASKS.slice(), states: {} };
+  saveData(d); return d;
+}
+function saveData(d) { localStorage.setItem('compta_tasks', JSON.stringify(d)); }
+function monthKey(y,m) { return y+'-'+String(m+1).padStart(2,'0'); }
+function getStates(data,y,m) {
+  var k = monthKey(y,m);
+  if (!data.states[k]) data.states[k] = {};
+  return data.states[k];
+}
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ---- PAGES ---- */
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+  document.getElementById('page-'+name).classList.add('active');
+  if (name === 'main') renderMonth();
+  if (name === 'manager') renderManager();
+}
+
+/* ---- TOAST ---- */
+var toastTimer;
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 2200);
+}
+
+/* ---- MAIN PAGE ---- */
+function renderMonth() {
+  var data = getData();
+  var states = getStates(data, currentYear, currentMonth);
+  var tasks = data.tasks;
+  var MONTHS = ['janvier','février','mars','avril','mai','juin',
+                'juillet','août','septembre','octobre','novembre','décembre'];
+  document.getElementById('month-label').textContent =
+    MONTHS[currentMonth]+' '+currentYear;
+
+  var list = document.getElementById('task-list');
+  list.innerHTML = '';
+  if (!tasks.length) {
+    list.innerHTML = '<div class="empty-state">Aucune tâche — ajoutez-en depuis le gestionnaire.</div>';
+    updateProgress(0,0); return;
+  }
+
+  var done = 0;
+  tasks.forEach(function(task,i) {
+    var checked = !!states[i];
+    if (checked) done++;
+    var row = document.createElement('div');
+    row.className = 'swipe-row';
+    row.innerHTML =
+      '<div class="swipe-bg swipe-bg-right"><svg width="22" height="22" viewBox="0 0 22 22" fill="none">' +
+        '<path d="M4 11.5L9 16.5L18 6" stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '</svg></div>' +
+      '<div class="swipe-bg swipe-bg-left"><svg width="20" height="20" viewBox="0 0 20 20" fill="none">' +
+        '<path d="M5 5L15 15M15 5L5 15" stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '</svg></div>' +
+      '<div class="task-item'+(checked?' done':'')+'">'+
+        '<div class="status-dot"></div>'+
+        '<span class="task-name">'+esc(task)+'</span>'+
+      '</div>';
+    list.appendChild(row);
+    initSwipe(row, i, checked);
+  });
+  updateProgress(done, tasks.length);
+  if (localStorage.getItem('swipe_seen'))
+    document.getElementById('swipe-hint').style.display = 'none';
+}
+
+function updateProgress(done,total) {
+  var pct = total ? Math.round(done/total*100) : 0;
+  document.getElementById('progress-fill').style.width = pct+'%';
+  document.getElementById('progress-text').textContent =
+    done+' / '+total+' tâche'+(total!==1?'s':'');
+  document.getElementById('progress-pct').textContent = pct+' %';
+  document.getElementById('all-done').style.display =
+    (done===total && total>0) ? 'flex' : 'none';
+  var lbl = document.getElementById('month-label');
+  lbl.classList.remove('incomplete','complete');
+  if (total > 0) lbl.classList.add(done===total ? 'complete' : 'incomplete');
+}
+
+function initSwipe(row, index, checked) {
+  var fg = row.querySelector('.task-item');
+  var bgR = row.querySelector('.swipe-bg-right');
+  var bgL = row.querySelector('.swipe-bg-left');
+  var sx=0,sy=0,dx=0,active=false,axis=null,settled=false;
+
+  function begin(x,y){ if(settled)return; sx=x;sy=y;dx=0;active=true;axis=null; fg.classList.add('is-dragging'); }
+  function move(x,y){
+    if(!active||settled)return;
+    var mx=x-sx, my=y-sy;
+    if(!axis){ if(Math.abs(mx)<5&&Math.abs(my)<5)return; axis=Math.abs(mx)>=Math.abs(my)?'h':'v'; }
+    if(axis==='v'){ active=false; fg.classList.remove('is-dragging'); return; }
+    dx=mx;
+    fg.style.transform='translateX('+dx+'px)';
+    var r=Math.min(Math.abs(dx)/SWIPE_THRESHOLD,1);
+    bgR.style.opacity=dx>0?r:0;
+    bgL.style.opacity=dx<0?r:0;
+  }
+  function end(){
+    if(!active||settled)return; active=false;
+    fg.classList.remove('is-dragging'); fg.classList.add('snapping');
+    if(dx>SWIPE_THRESHOLD){
+      settled=true; localStorage.setItem('swipe_seen','1');
+      document.getElementById('swipe-hint').style.display='none';
+      fg.style.transform='translateX('+(window.innerWidth+60)+'px)';
+      bgR.style.opacity=1;
+      setTimeout(function(){ toggleTask(index); },310);
+    } else if(dx<-SWIPE_THRESHOLD){
+      settled=true; localStorage.setItem('swipe_seen','1');
+      document.getElementById('swipe-hint').style.display='none';
+      fg.style.transform='translateX(-'+(window.innerWidth+60)+'px)';
+      bgL.style.opacity=1;
+      setTimeout(function(){ toggleTask(index); },310);
+    } else {
+      fg.style.transform='translateX(0)'; bgR.style.opacity=0; bgL.style.opacity=0;
+    }
+    setTimeout(function(){ fg.classList.remove('snapping'); },360);
+  }
+
+  fg.addEventListener('touchstart',function(e){ begin(e.touches[0].clientX,e.touches[0].clientY); },{passive:true});
+  fg.addEventListener('touchmove', function(e){ move(e.touches[0].clientX,e.touches[0].clientY); },{passive:true});
+  fg.addEventListener('touchend',end); fg.addEventListener('touchcancel',end);
+  fg.addEventListener('mousedown',function(e){
+    begin(e.clientX,e.clientY);
+    function onM(ev){ move(ev.clientX,ev.clientY); }
+    function onU(){ end(); window.removeEventListener('mousemove',onM); window.removeEventListener('mouseup',onU); }
+    window.addEventListener('mousemove',onM); window.addEventListener('mouseup',onU);
+    e.preventDefault();
+  });
+}
+
+function toggleTask(index) {
+  var data = getData();
+  var states = getStates(data,currentYear,currentMonth);
+  states[index] = !states[index];
+  saveData(data);
+  renderMonth();
+}
+
+function changeMonth(dir) {
+  currentMonth+=dir;
+  if(currentMonth<0){currentMonth=11;currentYear--;}
+  if(currentMonth>11){currentMonth=0;currentYear++;}
+  renderMonth();
+}
+
+/* ---- MANAGER PAGE ---- */
+function renderManager() {
+  var data = getData();
+  var list = document.getElementById('mgr-task-list');
+  list.innerHTML = '';
+
+  if (!data.tasks.length) {
+    list.innerHTML = '<div class="empty-state">Aucune tâche pour l\'instant.</div>';
+    return;
+  }
+
+  data.tasks.forEach(function(task,i) {
+    var row = document.createElement('div');
+    row.className = 'mgr-row';
+    row.innerHTML =
+      '<div class="mgr-row-icon">'+(i+1)+'</div>'+
+      '<span class="mgr-row-name">'+esc(task)+'</span>'+
+      '<button class="mgr-del-btn" data-index="'+i+'" title="Supprimer">&#215;</button>';
+    list.appendChild(row);
+  });
+
+  list.querySelectorAll('.mgr-del-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      mgrDelete(parseInt(btn.dataset.index));
+    });
+  });
+}
+
+function mgrDelete(index) {
+  var data = getData();
+  var name = data.tasks[index];
+  if (!confirm('Supprimer "'+name+'" de tous les mois ?')) return;
+  data.tasks.splice(index,1);
+  Object.keys(data.states).forEach(function(key) {
+    var s=data.states[key], ns={};
+    Object.keys(s).forEach(function(k){
+      var n=parseInt(k);
+      if(n<index) ns[n]=s[k];
+      else if(n>index) ns[n-1]=s[k];
+    });
+    data.states[key]=ns;
+  });
+  saveData(data);
+  renderManager();
+  showToast('"'+name+'" supprimée.');
+}
+
+function mgrAdd() {
+  var input = document.getElementById('mgr-input');
+  var val = input.value.trim().toUpperCase();
+  if (!val) { input.focus(); return; }
+  var data = getData();
+  if (data.tasks.indexOf(val) !== -1) {
+    showToast('Cette tâche existe déjà.'); input.select(); return;
+  }
+  data.tasks.push(val);
+  saveData(data);
+  input.value = '';
+  renderManager();
+  showToast('"'+val+'" ajoutée.');
+}
+
+/* ---- NOTIFICATIONS ---- */
+function checkNotifBanner() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission==='granted') {
+    document.getElementById('notif-banner').style.display='none'; scheduleDailyCheck();
+  } else if (Notification.permission!=='denied') {
+    document.getElementById('notif-banner').style.display='flex';
+  }
+}
+function requestNotifPermission() {
+  Notification.requestPermission().then(function(p) {
+    document.getElementById('notif-banner').style.display='none';
+    if (p==='granted') { scheduleDailyCheck(); checkAndNotify(); }
+  });
+}
+function checkAndNotify() {
+  if (Notification.permission!=='granted') return;
+  var now=new Date(); if (now.getDate()!==1) return;
+  var key='notif_'+now.getFullYear()+'_'+now.getMonth();
+  if (localStorage.getItem(key)) return;
+  var M=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  var pm=now.getMonth()===0?11:now.getMonth()-1;
+  var py=now.getMonth()===0?now.getFullYear()-1:now.getFullYear();
+  new Notification('Comptabilité Mensuelle',{
+    body:"N'oubliez pas de transmettre vos documents de "+M[pm]+' '+py+' à votre comptable !',
+    tag:'compta-mensuelle'
+  });
+  localStorage.setItem(key,'1');
+}
+function scheduleDailyCheck() {
+  checkAndNotify();
+  var now=new Date(), tm=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1,0,1,0);
+  setTimeout(function(){ checkAndNotify(); setInterval(checkAndNotify,86400000); }, tm-now);
+}
+
+/* ---- PWA SETUP ---- */
+var ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">'
+  + '<rect width="512" height="512" rx="112" fill="#4aa8f5"/>'
+  + '<rect x="120" y="96" width="256" height="320" rx="22" fill="white"/>'
+  + '<rect x="120" y="96" width="256" height="86" rx="22" fill="#1a72d4"/>'
+  + '<rect x="120" y="158" width="256" height="24" fill="#1a72d4"/>'
+  + '<rect x="192" y="72" width="22" height="48" rx="11" fill="#0a4a9c"/>'
+  + '<rect x="298" y="72" width="22" height="48" rx="11" fill="#0a4a9c"/>'
+  + '<rect x="156" y="220" width="88" height="11" rx="5" fill="#c0dcf8"/>'
+  + '<rect x="156" y="244" width="130" height="11" rx="5" fill="#c0dcf8"/>'
+  + '<path d="M154 308 L216 374 L364 224" stroke="#27ae60" stroke-width="40"'
+  + ' fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
+  + '</svg>';
+
+function svgToPng(svg, size, cb) {
+  var canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  var ctx = canvas.getContext('2d');
+  var img = new Image();
+  img.onload = function() { ctx.drawImage(img,0,0,size,size); cb(canvas.toDataURL('image/png')); };
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+}
+
+function setupPWA() {
+  svgToPng(ICON_SVG, 512, function(p512) {
+    svgToPng(ICON_SVG, 192, function(p192) {
+      svgToPng(ICON_SVG, 180, function(p180) {
+        document.getElementById('ati').href = p180;
+        var mf = { name:'MonthEnd', short_name:'MonthEnd',
+          description:'Suivi mensuel des documents comptables',
+          start_url:'.', display:'standalone', orientation:'portrait',
+          background_color:'#f0f7ff', theme_color:'#5aabf5',
+          icons:[
+            {src:p192, sizes:'192x192', type:'image/png', purpose:'any maskable'},
+            {src:p512, sizes:'512x512', type:'image/png', purpose:'any maskable'}
+          ]
+        };
+        var blob = new Blob([JSON.stringify(mf)], {type:'application/manifest+json'});
+        document.getElementById('pwa-manifest').href = URL.createObjectURL(blob);
+        if ('serviceWorker' in navigator) {
+          var sw = 'self.addEventListener("install",function(e){self.skipWaiting();});'
+            + 'self.addEventListener("activate",function(e){e.waitUntil(self.clients.claim());});'
+            + 'self.addEventListener("fetch",function(e){e.respondWith(fetch(e.request).catch(function(){return caches.match(e.request);}));});';
+          navigator.serviceWorker.register(
+            URL.createObjectURL(new Blob([sw],{type:'application/javascript'}))
+          ).catch(function(){});
+        }
+      });
+    });
+  });
+}
+
+/* ---- INIT ---- */
+(function(){
+  currentYear=2026; currentMonth=2;
+  renderMonth(); checkNotifBanner(); setupPWA();
+})();
+</script>
+</body>
+</html>
