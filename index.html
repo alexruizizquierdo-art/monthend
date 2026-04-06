@@ -243,6 +243,30 @@
     padding: 14px 20px; margin-bottom: 16px;
     color: #1a7a45; font-size: 14px; font-weight: 600;
   }
+  .all-done-badge.celebrating {
+    animation: celebrate 0.7s cubic-bezier(.36,.07,.19,.97);
+  }
+  @keyframes celebrate {
+    0%  { transform: scale(1); }
+    15% { transform: scale(1.06) rotate(-1deg); }
+    30% { transform: scale(1.06) rotate(1deg); }
+    45% { transform: scale(1.04) rotate(-1deg); }
+    60% { transform: scale(1.02) rotate(0.5deg); }
+    75% { transform: scale(1.01); }
+    100%{ transform: scale(1); }
+  }
+
+  /* Month slide animations */
+  .slide-out-left  { animation: soL 0.28s ease forwards; }
+  .slide-out-right { animation: soR 0.28s ease forwards; }
+  .slide-in-right  { animation: siR 0.3s cubic-bezier(.25,.46,.45,.94) forwards; }
+  .slide-in-left   { animation: siL 0.3s cubic-bezier(.25,.46,.45,.94) forwards; }
+  @keyframes soL { to   { transform:translateX(-32px); opacity:0; } }
+  @keyframes soR { to   { transform:translateX(32px);  opacity:0; } }
+  @keyframes siR { from { transform:translateX(32px);  opacity:0; } }
+  @keyframes siL { from { transform:translateX(-32px); opacity:0; } }
+
+  .month-slide-wrap { overflow: hidden; }
   .empty-state {
     text-align: center; padding: 40px 20px;
     color: var(--muted); font-size: 14px;
@@ -503,7 +527,9 @@
       </span>
     </div>
 
-    <div class="task-card" id="task-list" style="margin-top:8px;"></div>
+    <div class="month-slide-wrap">
+      <div class="task-card" id="task-list" style="margin-top:8px;"></div>
+    </div>
   </div>
 </div>
 
@@ -713,11 +739,26 @@ function updateProgress(done,total) {
   document.getElementById('progress-text').textContent =
     done+' / '+total+' tâche'+(total!==1?'s':'');
   document.getElementById('progress-pct').textContent = pct+' %';
-  document.getElementById('all-done').style.display =
-    (done===total && total>0) ? 'flex' : 'none';
+
+  var allDone = document.getElementById('all-done');
+  var wasHidden = allDone.style.display === 'none' || allDone.style.display === '';
+  var isComplete = done === total && total > 0;
+  allDone.style.display = isComplete ? 'flex' : 'none';
+
   var lbl = document.getElementById('month-label');
   lbl.classList.remove('incomplete','complete');
-  if (total > 0) lbl.classList.add(done===total ? 'complete' : 'incomplete');
+  if (total > 0) lbl.classList.add(isComplete ? 'complete' : 'incomplete');
+
+  if (isComplete && wasHidden) {
+    allDone.classList.remove('celebrating');
+    void allDone.offsetWidth;
+    allDone.classList.add('celebrating');
+    clearTimeout(autoAdvanceTimer);
+    autoAdvanceTimer = setTimeout(function() {
+      allDone.classList.remove('celebrating');
+      animateChangeMonth(1);
+    }, 1800);
+  }
 }
 
 function initSwipe(row, index, checked) {
@@ -779,11 +820,43 @@ function toggleTask(index) {
   renderMonth();
 }
 
+var autoAdvanceTimer = null;
+var isAnimating = false;
+
+function animateChangeMonth(dir) {
+  if (isAnimating) return;
+  isAnimating = true;
+  clearTimeout(autoAdvanceTimer);
+
+  var list  = document.getElementById('task-list');
+  var label = document.getElementById('month-label');
+  var outCls = dir > 0 ? 'slide-out-left'  : 'slide-out-right';
+  var inCls  = dir > 0 ? 'slide-in-right'  : 'slide-in-left';
+
+  list.classList.add(outCls);
+  label.classList.add(outCls);
+
+  setTimeout(function() {
+    list.classList.remove(outCls);
+    label.classList.remove(outCls);
+
+    currentMonth += dir;
+    if (currentMonth < 0)  { currentMonth = 11; currentYear--; }
+    if (currentMonth > 11) { currentMonth = 0;  currentYear++; }
+    renderMonth();
+
+    list.classList.add(inCls);
+    label.classList.add(inCls);
+    setTimeout(function() {
+      list.classList.remove(inCls);
+      label.classList.remove(inCls);
+      isAnimating = false;
+    }, 320);
+  }, 260);
+}
+
 function changeMonth(dir) {
-  currentMonth+=dir;
-  if(currentMonth<0){currentMonth=11;currentYear--;}
-  if(currentMonth>11){currentMonth=0;currentYear++;}
-  renderMonth();
+  animateChangeMonth(dir);
 }
 
 /* ---- MANAGER PAGE ---- */
