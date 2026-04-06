@@ -938,17 +938,45 @@ function requestNotifPermission() {
 }
 function checkAndNotify() {
   if (Notification.permission!=='granted') return;
-  var now=new Date(); if (now.getDate()!==1) return;
-  var key='notif_'+now.getFullYear()+'_'+now.getMonth();
-  if (localStorage.getItem(key)) return;
+  var now=new Date();
+  var today=now.getDate(), thisMonth=now.getMonth(), thisYear=now.getFullYear();
   var M=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
-  var pm=now.getMonth()===0?11:now.getMonth()-1;
-  var py=now.getMonth()===0?now.getFullYear()-1:now.getFullYear();
-  new Notification('Comptabilité Mensuelle',{
-    body:"N'oubliez pas de transmettre vos documents de "+M[pm]+' '+py+' à votre comptable !',
-    tag:'compta-mensuelle'
-  });
-  localStorage.setItem(key,'1');
+  var pm=thisMonth===0?11:thisMonth-1;
+  var py=thisMonth===0?thisYear-1:thisYear;
+
+  /* --- Rappel du 1er du mois (existant) --- */
+  if (today===1) {
+    var key='notif_'+thisYear+'_'+thisMonth;
+    if (!localStorage.getItem(key)) {
+      new Notification('MonthEnd', {
+        body:"N'oubliez pas de transmettre vos documents de "+M[pm]+' '+py+' à votre comptable !',
+        tag:'compta-mensuelle'
+      });
+      localStorage.setItem(key,'1');
+    }
+  }
+
+  /* --- Rappel quotidien après 7 jours si tâches incomplètes --- */
+  if (today >= 8) {
+    var data = getData();
+    var states = getStates(data, py, pm);
+    var total = data.tasks.length;
+    var done = 0;
+    for (var i=0; i<total; i++) { if (states[i]) done++; }
+
+    if (done < total) {
+      var remaining = total - done;
+      var lateKey = 'notif_late_'+py+'_'+pm+'_'+thisYear+'_'+thisMonth+'_'+today;
+      if (!localStorage.getItem(lateKey)) {
+        new Notification('⚠️ MonthEnd — Rappel', {
+          body: remaining+' tâche'+(remaining>1?'s':'')+' de '+M[pm]+' '+py
+            +' non complétée'+(remaining>1?'s':'')+'. Pensez à tout transmettre à votre comptable !',
+          tag: 'compta-late'
+        });
+        localStorage.setItem(lateKey,'1');
+      }
+    }
+  }
 }
 function scheduleDailyCheck() {
   checkAndNotify();
