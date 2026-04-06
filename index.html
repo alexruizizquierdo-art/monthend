@@ -448,6 +448,7 @@
             fill="none" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
         <span class="logo-name">MonthEnd</span>
+        <div class="sync-dot" id="sync-dot" title="Synchronisation"></div>
       </div>
       <button class="icon-btn" onclick="showPage('manager')" title="Gérer les tâches">
         <svg width="17" height="17" viewBox="0 0 17 17" fill="none">
@@ -541,6 +542,20 @@
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<style>
+  .sync-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #b0cfe8;
+    flex-shrink: 0;
+    transition: background 0.4s;
+  }
+  .sync-dot.synced  { background: #27ae60; }
+  .sync-dot.syncing { background: #f39c12; animation: pulse 0.9s infinite; }
+  .sync-dot.error   { background: #e74c3c; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+</style>
+
 <script>
 const DEFAULT_TASKS = [
   "RAPPORT DE VENTE MENSUEL Q8","RAPPORT LOTERIE","RAPPORTS DELHAIZE",
@@ -549,16 +564,82 @@ const DEFAULT_TASKS = [
 const SWIPE_THRESHOLD = 80;
 let currentYear, currentMonth;
 
+/* ---- FIREBASE ---- */
+var db = null, DOC = null;
+
+function loadScript(src, cb) {
+  var s = document.createElement('script');
+  s.src = src;
+  s.onload = cb;
+  s.onerror = function() { setSyncDot('error'); };
+  document.head.appendChild(s);
+}
+
+function initFirebase() {
+  loadScript('https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js', function() {
+    loadScript('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js', function() {
+      firebase.initializeApp({
+        apiKey: "AIzaSyAHiL6IJoummqprxvugg33Zsa20w21USTk",
+        authDomain: "monthend-9b39d.firebaseapp.com",
+        projectId: "monthend-9b39d",
+        storageBucket: "monthend-9b39d.firebasestorage.app",
+        messagingSenderId: "925857728795",
+        appId: "1:925857728795:web:f8d9add4952a1f63e62bbe"
+      });
+      db = firebase.firestore();
+      DOC = db.collection('monthend').doc('data');
+      initFirestore();
+    });
+  });
+}
+
+function setSyncDot(state) {
+  var d = document.getElementById('sync-dot');
+  if (!d) return;
+  d.className = 'sync-dot' + (state ? ' '+state : '');
+}
+
 /* ---- DATA ---- */
 function getData() {
   try {
     var d = JSON.parse(localStorage.getItem('compta_tasks') || 'null');
     if (d && d.tasks) return d;
   } catch(e) {}
-  var d = { tasks: DEFAULT_TASKS.slice(), states: {} };
-  saveData(d); return d;
+  return { tasks: DEFAULT_TASKS.slice(), states: {} };
 }
-function saveData(d) { localStorage.setItem('compta_tasks', JSON.stringify(d)); }
+
+function saveData(d) {
+  localStorage.setItem('compta_tasks', JSON.stringify(d));
+  if (!DOC) return;
+  setSyncDot('syncing');
+  DOC.set({ tasks: d.tasks, states: d.states })
+    .then(function() { setSyncDot('synced'); setTimeout(function(){ setSyncDot(''); }, 2000); })
+    .catch(function(e) { console.warn('Firestore save error:', e); setSyncDot('error'); });
+}
+
+function initFirestore() {
+  setSyncDot('syncing');
+  DOC.onSnapshot(function(snap) {
+    if (snap.exists) {
+      var remote = snap.data();
+      if (remote && remote.tasks) {
+        localStorage.setItem('compta_tasks', JSON.stringify(remote));
+      }
+    } else {
+      var local = getData();
+      DOC.set({ tasks: local.tasks, states: local.states }).catch(function(){});
+    }
+    setSyncDot('synced');
+    setTimeout(function(){ setSyncDot(''); }, 2000);
+    renderMonth();
+    if (document.getElementById('page-manager').classList.contains('active')) {
+      renderManager();
+    }
+  }, function(err) {
+    console.warn('Firestore listener error:', err);
+    setSyncDot('error');
+  });
+}
 function monthKey(y,m) { return y+'-'+String(m+1).padStart(2,'0'); }
 function getStates(data,y,m) {
   var k = monthKey(y,m);
@@ -857,7 +938,7 @@ function setupPWA() {
 /* ---- INIT ---- */
 (function(){
   currentYear=2026; currentMonth=2;
-  renderMonth(); checkNotifBanner(); setupPWA();
+  renderMonth(); checkNotifBanner(); setupPWA(); initFirebase();
 })();
 </script>
 </body>
