@@ -203,29 +203,56 @@
   .task-item.snapping { transition: transform 0.32s cubic-bezier(.25,.46,.45,.94); }
   .task-item.done { background: #f4fbff; }
 
-  .status-dot {
-    width: 10px; height: 10px;
-    border-radius: 50%;
+  /* Check wrap — left side indicator */
+  .check-wrap {
+    width: 24px; height: 24px;
     flex-shrink: 0;
-    background: var(--border-s);
-    transition: background 0.25s, box-shadow 0.25s;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
   }
-  .task-item.done .status-dot {
-    background: var(--blue-400);
-    box-shadow: 0 0 0 3px rgba(90,171,245,0.18);
+  .check-circle {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 1.8px solid var(--border-s);
+    transition: border-color 0.25s, background 0.25s;
   }
+  .task-item.done .check-circle {
+    background: #eafaf1;
+    border-color: #27ae60;
+  }
+  .check-svg {
+    position: absolute;
+    width: 14px; height: 14px;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    overflow: visible;
+  }
+  .check-svg path {
+    fill: none;
+    stroke: #27ae60;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 21;
+    stroke-dashoffset: 21;
+  }
+  .task-item.done .check-svg path {
+    animation: drawCheck 0.45s cubic-bezier(.25,.46,.45,.94) 0.05s forwards;
+  }
+  @keyframes drawCheck {
+    to { stroke-dashoffset: 0; }
+  }
+
   .task-name {
     flex: 1;
     font-size: 15px;
     font-weight: 300;
     color: var(--text);
-    transition: color 0.2s, opacity 0.2s;
+    transition: color 0.25s, opacity 0.25s;
   }
   .task-item.done .task-name {
     color: var(--muted);
-    text-decoration: line-through;
-    text-decoration-color: var(--blue-200);
-    opacity: 0.7;
+    opacity: 0.6;
   }
 
   /* Swipe hint */
@@ -722,7 +749,12 @@ function renderMonth() {
         '<path d="M5 5L15 15M15 5L5 15" stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>' +
       '</svg></div>' +
       '<div class="task-item'+(checked?' done':'')+'">'+
-        '<div class="status-dot"></div>'+
+        '<div class="check-wrap">'+
+          '<div class="check-circle"></div>'+
+          '<svg class="check-svg" viewBox="0 0 14 14">'+
+            '<path d="M2.5 7.5 L5.5 10.5 L11.5 3.5"/>'+
+          '</svg>'+
+        '</div>'+
         '<span class="task-name">'+esc(task)+'</span>'+
       '</div>';
     list.appendChild(row);
