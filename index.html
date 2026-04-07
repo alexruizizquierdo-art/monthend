@@ -665,32 +665,52 @@ function saveData(d) {
   localStorage.setItem('compta_tasks', JSON.stringify(d));
   if (!DOC) return;
   setSyncDot('syncing');
-  DOC.set({ tasks: d.tasks, states: d.states })
-    .then(function() { setSyncDot('synced'); setTimeout(function(){ setSyncDot(''); }, 2000); })
-    .catch(function(e) { console.warn('Firestore save error:', e); setSyncDot('error'); });
+  isSaving = true;
+  /* Sauvegarder avec merge pour ne jamais écraser des champs manquants */
+  DOC.set({ tasks: d.tasks, states: d.states }, { merge: true })
+    .then(function() {
+      setSyncDot('synced');
+      setTimeout(function(){ setSyncDot(''); isSaving = false; }, 1500);
+    })
+    .catch(function(e) {
+      console.warn('Firestore save error:', e);
+      setSyncDot('error');
+      isSaving = false;
+    });
 }
+
+var isSaving = false;
+var firestoreReady = false;
 
 function initFirestore() {
   setSyncDot('syncing');
-  DOC.onSnapshot(function(snap) {
+  DOC.get().then(function(snap) {
     if (snap.exists) {
       var remote = snap.data();
-      if (remote && remote.tasks) {
-        localStorage.setItem('compta_tasks', JSON.stringify(remote));
-      }
+      /* Fusionner : garder le plus grand nombre de states */
+      var local = getData();
+      var merged = {
+        tasks: remote.tasks && remote.tasks.length ? remote.tasks : local.tasks,
+        states: {}
+      };
+      /* Merge states : union des deux */
+      var allKeys = Object.keys(remote.states || {}).concat(Object.keys(local.states || {}));
+      allKeys.forEach(function(k) {
+        merged.states[k] = Object.assign({}, (remote.states||{})[k]||{}, (local.states||{})[k]||{});
+      });
+      localStorage.setItem('compta_tasks', JSON.stringify(merged));
     } else {
       var local = getData();
       DOC.set({ tasks: local.tasks, states: local.states }).catch(function(){});
     }
+    firestoreReady = true;
     setSyncDot('synced');
-    setTimeout(function(){ setSyncDot(''); }, 2000);
+    setTimeout(function(){ setSyncDot(''); }, 1500);
     renderMonth();
-    if (document.getElementById('page-manager').classList.contains('active')) {
-      renderManager();
-    }
-  }, function(err) {
-    console.warn('Firestore listener error:', err);
+  }).catch(function(err) {
+    console.warn('Firestore init error:', err);
     setSyncDot('error');
+    firestoreReady = true;
   });
 }
 function monthKey(y,m) { return y+'-'+String(m+1).padStart(2,'0'); }
