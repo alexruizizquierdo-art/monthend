@@ -255,7 +255,77 @@
     opacity: 0.6;
   }
 
-  /* Swipe hint */
+  /* ---- LOTERIE PERIOD NOTE ---- */
+  .loterie-note {
+    display: flex; align-items: center; gap: 8px;
+    padding: 0 16px 11px 52px;
+    background: var(--surface);
+    cursor: pointer;
+    transition: background 0.12s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .loterie-note.done-bg { background: #f4fbff; }
+  .loterie-note:hover { background: var(--blue-50); }
+  .loterie-note-label {
+    font-size: 11px; font-weight: 300; font-style: italic; color: var(--muted); flex-shrink: 0;
+  }
+  .loterie-note-value {
+    font-size: 12px; font-weight: 400; font-style: italic; color: var(--blue-600);
+    background: var(--blue-50); border: 1px solid var(--blue-100);
+    border-radius: 6px; padding: 2px 9px; flex: 1;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .loterie-note-value.empty {
+    color: var(--muted); background: none; border-color: transparent; opacity: 0.6;
+  }
+  .loterie-note-edit { font-size: 11px; color: var(--blue-400); flex-shrink: 0; }
+
+  /* ---- PERIOD MODAL ---- */
+  .period-overlay {
+    position: fixed; inset: 0;
+    background: rgba(10,30,60,0.35);
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+    z-index: 500;
+    display: flex; align-items: flex-end; justify-content: center;
+    animation: fadeOv 0.2s ease;
+  }
+  @keyframes fadeOv { from { opacity:0; } }
+  .period-sheet {
+    background: var(--surface);
+    border-radius: 20px 20px 0 0;
+    padding: 24px 20px 36px;
+    width: 100%; max-width: 500px;
+    animation: slideUp 0.28s cubic-bezier(.25,.46,.45,.94);
+  }
+  @keyframes slideUp { from { transform: translateY(100%); } }
+  .period-sheet-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .period-sheet-sub { font-size: 13px; font-weight: 300; font-style: italic; color: var(--muted); margin-bottom: 18px; }
+  .period-input {
+    width: 100%; border: 1.5px solid var(--border-s); border-radius: var(--rs);
+    background: var(--blue-50); padding: 13px 14px;
+    font-size: 16px; font-family: inherit; font-weight: 300; color: var(--text);
+    outline: none; margin-bottom: 14px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .period-input:focus { border-color: var(--blue-400); box-shadow: 0 0 0 3px var(--blue-100); }
+  .period-actions { display: flex; gap: 10px; }
+  .period-cancel {
+    flex: 1; padding: 13px; border: 1px solid var(--border-s); border-radius: var(--rs);
+    background: none; font-size: 15px; font-family: inherit; font-weight: 300;
+    color: var(--muted); cursor: pointer; transition: background 0.12s;
+  }
+  .period-cancel:hover { background: var(--blue-50); }
+  .period-confirm {
+    flex: 2; padding: 13px; border: none; border-radius: var(--rs);
+    background: var(--blue-400); font-size: 15px; font-family: inherit;
+    font-weight: 600; color: white; cursor: pointer; transition: background 0.15s;
+  }
+  .period-confirm:hover { background: var(--blue-600); }
+  .period-clear {
+    width: 100%; padding: 10px; border: none; background: none; margin-top: 6px;
+    font-size: 13px; font-family: inherit; font-weight: 300; font-style: italic;
+    color: var(--red); cursor: pointer; opacity: 0.8;
+  }
   .swipe-hint {
     display: flex; align-items: center; justify-content: center; gap: 20px;
     padding: 6px 0 4px;
@@ -595,6 +665,24 @@
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<!-- Period modal -->
+<div class="period-overlay" id="period-overlay" style="display:none;" onclick="closePeriodModal(event)">
+  <div class="period-sheet" onclick="event.stopPropagation()">
+    <div class="period-sheet-title">Dernière période — Rapport Loterie</div>
+    <div class="period-sheet-sub">Indiquez la dernière période hebdomadaire transmise</div>
+    <input class="period-input" id="period-input" type="text"
+      placeholder="ex : 28/04 – 04/05  ou  Semaine 18"
+      onkeydown="if(event.key==='Enter')savePeriod()">
+    <div class="period-actions">
+      <button class="period-cancel" onclick="closePeriodModal()">Annuler</button>
+      <button class="period-confirm" onclick="savePeriod()">Enregistrer</button>
+    </div>
+    <button class="period-clear" id="period-clear-btn" onclick="clearPeriod()" style="display:none;">
+      Effacer la période
+    </button>
+  </div>
+</div>
+
 <style>
   .sync-dot {
     width: 7px; height: 7px;
@@ -721,6 +809,47 @@ function getStates(data,y,m) {
 }
 function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
+/* ---- LOTERIE PERIOD ---- */
+function loteriePeriodKey(y, m) { return 'loterie_period_'+y+'_'+m; }
+
+function getLoteriePeriod(y, m) {
+  return localStorage.getItem(loteriePeriodKey(y, m)) || '';
+}
+
+function openPeriodModal() {
+  var period = getLoteriePeriod(currentYear, currentMonth);
+  var input = document.getElementById('period-input');
+  var clearBtn = document.getElementById('period-clear-btn');
+  input.value = period;
+  clearBtn.style.display = period ? 'block' : 'none';
+  document.getElementById('period-overlay').style.display = 'flex';
+  setTimeout(function(){ input.focus(); input.select(); }, 120);
+}
+
+function closePeriodModal(e) {
+  if (e && e.target !== document.getElementById('period-overlay')) return;
+  document.getElementById('period-overlay').style.display = 'none';
+}
+
+function savePeriod() {
+  var val = document.getElementById('period-input').value.trim();
+  if (val) {
+    localStorage.setItem(loteriePeriodKey(currentYear, currentMonth), val);
+  } else {
+    localStorage.removeItem(loteriePeriodKey(currentYear, currentMonth));
+  }
+  document.getElementById('period-overlay').style.display = 'none';
+  renderMonth();
+  showToast('Période enregistrée.');
+}
+
+function clearPeriod() {
+  localStorage.removeItem(loteriePeriodKey(currentYear, currentMonth));
+  document.getElementById('period-overlay').style.display = 'none';
+  renderMonth();
+  showToast('Période effacée.');
+}
+
 /* ---- PAGES ---- */
 function showPage(name) {
   document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
@@ -777,6 +906,19 @@ function renderMonth() {
         '</div>'+
         '<span class="task-name">'+esc(task)+'</span>'+
       '</div>';
+
+    /* Loterie note */
+    if (task === 'RAPPORT LOTERIE') {
+      var period = getLoteriePeriod(currentYear, currentMonth);
+      var noteDiv = document.createElement('div');
+      noteDiv.className = 'loterie-note' + (checked ? ' done-bg' : '');
+      noteDiv.innerHTML =
+        '<span class="loterie-note-label">Dernière période :</span>'+
+        '<span class="loterie-note-value'+(period?'':' empty')+'">'+(period ? esc(period) : 'non renseignée')+'</span>'+
+        '<span class="loterie-note-edit">✎</span>';
+      noteDiv.addEventListener('click', function() { openPeriodModal(); });
+      row.appendChild(noteDiv);
+    }
     list.appendChild(row);
     initSwipe(row, i, checked);
   });
