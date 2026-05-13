@@ -393,7 +393,22 @@
   .notif-btn:hover { background: var(--blue-600); }
 
   /* ========= MANAGER PAGE ========= */
-  .mgr-header-title {
+  .mgr-access-btn {
+    background: var(--blue-50);
+    border: 1px solid var(--border-s);
+    border-radius: var(--rs);
+    color: var(--blue-600);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 7px 14px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s, transform 0.1s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mgr-access-btn:hover { background: var(--blue-100); }
+  .mgr-access-btn:active { transform: scale(0.95); }
     font-size: 20px;
     font-weight: 300;
     font-style: italic;
@@ -571,14 +586,8 @@
         <span class="logo-name">MonthEnd</span>
         <div class="sync-dot" id="sync-dot" title="Synchronisation"></div>
       </div>
-      <button class="icon-btn" onclick="showPage('manager')" title="Gérer les tâches">
-        <svg width="17" height="17" viewBox="0 0 17 17" fill="none">
-          <circle cx="8.5" cy="8.5" r="2" stroke="currentColor" stroke-width="1.6"/>
-          <path d="M8.5 1v2M8.5 14v2M1 8.5h2M14 8.5h2
-                   M3.1 3.1l1.4 1.4M12.5 12.5l1.4 1.4
-                   M12.5 3.1l-1.4 1.4M4.5 12.5l-1.4 1.4"
-            stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        </svg>
+      <button class="mgr-access-btn" onclick="showPage('manager')" title="Gérer les tâches">
+        Gérer
       </button>
     </div>
     <div class="month-nav">
@@ -877,6 +886,9 @@ function renderMonth() {
   document.getElementById('month-label').textContent =
     MONTHS[currentMonth]+' '+currentYear;
 
+  /* Reset badge before render so wasHidden is reliable */
+  document.getElementById('all-done').style.display = 'none';
+
   var list = document.getElementById('task-list');
   list.innerHTML = '';
   if (!tasks.length) {
@@ -943,7 +955,7 @@ function updateProgress(done,total) {
   lbl.classList.remove('incomplete','complete');
   if (total > 0) lbl.classList.add(isComplete ? 'complete' : 'incomplete');
 
-  if (isComplete && wasHidden) {
+  if (isComplete && wasHidden && !isManualNav) {
     allDone.classList.remove('celebrating');
     void allDone.offsetWidth;
     allDone.classList.add('celebrating');
@@ -1016,8 +1028,9 @@ function toggleTask(index) {
 
 var autoAdvanceTimer = null;
 var isAnimating = false;
+var isManualNav = false;
 
-function animateChangeMonth(dir) {
+function animateChangeMonth(dir, manual) {
   if (isAnimating) return;
   isAnimating = true;
   clearTimeout(autoAdvanceTimer);
@@ -1037,7 +1050,10 @@ function animateChangeMonth(dir) {
     currentMonth += dir;
     if (currentMonth < 0)  { currentMonth = 11; currentYear--; }
     if (currentMonth > 11) { currentMonth = 0;  currentYear++; }
+
+    isManualNav = !!manual;
     renderMonth();
+    isManualNav = false;
 
     list.classList.add(inCls);
     label.classList.add(inCls);
@@ -1050,7 +1066,7 @@ function animateChangeMonth(dir) {
 }
 
 function changeMonth(dir) {
-  animateChangeMonth(dir);
+  animateChangeMonth(dir, true);
 }
 
 /* ---- MANAGER PAGE ---- */
@@ -1232,7 +1248,9 @@ function setupPWA() {
 
 /* ---- INIT ---- */
 (function(){
-  currentYear=2026; currentMonth=2;
+  var now = new Date();
+  currentYear = now.getFullYear();
+  currentMonth = now.getMonth();
   renderMonth(); checkNotifBanner(); setupPWA(); initFirebase();
 })();
 </script>
